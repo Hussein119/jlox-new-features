@@ -34,3 +34,12 @@
   > print a;
   > ```
 - [x] add break statements
+
+#### Code from Crafting Interpreters
+
+The code in this repository is based on the tutorial series from [craftinginterpreters.com](https://craftinginterpreters.com/) up to Chapter 11.
+
+- If you're new to the project, consider starting with the tutorial to understand the foundations.
+- For more details and the complete tutorial, visit [Crafting Interpreters](https://craftinginterpreters.com/).
+
+Feel free to explore, contribute, and adapt the code as needed.
