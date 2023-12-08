@@ -1,0 +1,130 @@
+/*
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+
+  return count;
+}
+
+//fun scope(a) {
+//  print a; // parameter
+//  var a = "local";
+//  print a; // local
+//}
+
+fun thrice(fn) {
+  for (var i = 1; i <= 3; i = i + 1) {
+    fn(i);
+  }
+}
+
+thrice(fun (a) {
+  print a;
+});
+// "1".
+// "2".
+// "3".
+
+var counter = makeCounter();
+//counter(); // "1".
+//counter(); // "2".
+
+//scope("parameter");
+
+fun scope(a) {
+  print a;
+  var a = "local";
+  print a;
+}
+
+print 10;
+scope(5);
+
+/*
+
+/*
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+  {
+    var a = "block2";
+    showA();
+  }
+  showA();
+}
+*/
+
+/*
+var a = 5;
+
+{
+  print a;
+  var a = a;
+  print a;
+  a = 6; 
+  print a;
+}
+*/
+
+
+
+/*
+var a = 5; 
+var a = 6; 
+print a; 
+*/
+
+
+
+/*
+fun bad() {
+var a = "first";
+var a = "second";
+print a; 
+}
+
+bad();
+*/
+
+//break;
+
+/*
+while (true) {
+  if (5 > 0 ) {
+    print 6;
+    break;
+  }
+  var a = 6; 
+  print a;
+}
+var a = 5; 
+print a;
+*/
+
+while (true) {
+  var a = 6; 
+  print a;
+
+  if (5 > 0) {
+    break;
+  }
+}
+
+var a = 5;
+print a;
+
+/*
+if (a > 1) {
+  print a;
+  break;
+}
+*/

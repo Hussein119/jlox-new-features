@@ -1,0 +1,4 @@
+{
+    "editor.formatOnSave": true,
+    "java.debug.settings.onBuildFailureProceed": true
+}
