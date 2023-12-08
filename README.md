@@ -11,8 +11,8 @@
   Back to the outer comment. */
   ```
 - [x] Edit number() function in Scanner to make this accepted:
-  > 25e-1 = 2.5
-  > 25e+2 = 2500.0
+  > 25e-1 = 2.5\
+  > 25e+2 = 2500.0\
 - [x] Make the access of not initialized variable not allowed:
   > stringify() in Interpreter
 - [x] Accept compare number with the length of string:
@@ -20,7 +20,8 @@
 - [x] Accept add strings with numbers
   > visitBinaryExpr() in Interpreter
 - [x] Make this:
-  > print 5 \* "Hussein";
+  > print 5 \* "Hussein";\
+  > output:\
   > HusseinHusseinHusseinHusseinHussein
 - [x] Declaration without var
 - [x] anonymous functions
