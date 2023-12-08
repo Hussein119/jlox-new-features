@@ -1,4 +1,4 @@
-# Lox Scanner New Features
+# jlox new features
 
 - [x] Use single quotation for string `'Some Text'`
 - [x] Add multiline comment
