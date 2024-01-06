@@ -78,11 +78,12 @@ class Scanner {
 				addToken(COMMA);
 				break;
 			case '.':
-				if (nextIsDigit(c)) {
-					number();
-				} else {
-					addToken(DOT);
-				}
+				// if (nextIsDigit()) {
+				// number();
+				// } else {
+				// addToken(DOT);
+				// }
+				addToken(DOT);
 				break;
 			case '-':
 				addToken(MINUS);
@@ -166,13 +167,12 @@ class Scanner {
 		}
 	}
 
-	private boolean nextIsDigit(char c) {
+	private boolean nextIsDigit() {
 		if (isAtEnd())
 			return false;
-
 		char next = source.charAt(current);
 		current++;
-		return next >= '0' && next <= '9';
+		return Character.isDigit(next);
 	}
 
 	private void singleLineSingleQuotedString() {

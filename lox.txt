@@ -149,3 +149,12 @@ class Bacon {
 }
 
 Bacon().eat(); // Prints "Crunch crunch crunch!".
+
+
+class Doughnut {
+cook() {
+print "Fry until golden brown.";
+}
+}
+class BostonCream < Doughnut {}
+BostonCream().cook();
