@@ -1,406 +1,660 @@
+//> Evaluating Expressions interpreter-class
 package com.craftinginterpreters.lox;
+//> Statements and State import-list
 
-import java.util.List;
-import java.util.Map;
+//> Functions import-array-list
 import java.util.ArrayList;
+//< Functions import-array-list
+//> Resolving and Binding import-hash-map
 import java.util.HashMap;
+//< Resolving and Binding import-hash-map
+import java.util.List;
+//< Statements and State import-list
+//> Resolving and Binding import-map
+import java.util.Map;
+//< Resolving and Binding import-map
 
-import com.craftinginterpreters.lox.Expr.Variable;
+import java.util.Scanner;
 
-class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+/* Evaluating Expressions interpreter-class < Statements and State interpreter
+class Interpreter implements Expr.Visitor<Object> {
+*/
+//> Statements and State interpreter
+class Interpreter implements Expr.Visitor<Object>,
+    Stmt.Visitor<Void> {
+  // < Statements and State interpreter
+  /*
+   * Statements and State environment-field < Functions global-environment
+   * private Environment environment = new Environment();
+   */
+  // > Functions global-environment
+  final Environment globals = new Environment();
+  private Environment environment = globals;
+  // < Functions global-environment
+  // > Resolving and Binding locals-field
+  private final Map<Expr, Integer> locals = new HashMap<>();
+  // < Resolving and Binding locals-field
+  // > Statements and State environment-field
 
-    final Environment globals = new Environment();
-    private Environment environment = globals;
-    private final Map<Expr, Integer> locals = new HashMap<>();
+  // < Statements and State environment-field
+  // > Functions interpreter-constructor
+  public void defineNativeFunctions() {
+    globals.define("clock", new LoxCallable() {
+      @Override
+      public int arity() {
+        return 0;
+      }
 
-    boolean shouldBreak = false;
+      @Override
+      public Object call(Interpreter interpreter,
+          List<Object> arguments) {
+        return (double) System.currentTimeMillis() / 1000.0;
+      }
 
-    Interpreter() {
-        globals.define("clock", new LoxCallable() {
-            @Override
-            public int arity() {
-                return 0;
-            }
+      @Override
+      public String toString() {
+        return "<native fn>";
+      }
+    });
 
-            @Override
-            public Object call(Interpreter interpreter,
-                    List<Object> arguments) {
-                return (double) System.currentTimeMillis() / 1000.0;
-            }
+    // Define the "input" function for user input
+    globals.define("input", new LoxCallable() {
+      @Override
+      public int arity() {
+        return 0;
+      }
 
-            @Override
-            public String toString() {
-                return "<native fn>";
-            }
-        });
+      @Override
+      public Object call(Interpreter interpreter, List<Object> arguments) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter a value: ");
+        return scanner.nextLine();
+      }
+
+      @Override
+      public String toString() {
+        return "<native fn>";
+      }
+    });
+  }
+
+  Interpreter() {
+    defineNativeFunctions();
+  }
+
+  // < Functions interpreter-constructor
+  /*
+   * Evaluating Expressions interpret < Statements and State interpret
+   * void interpret(Expr expression) { // [void]
+   * try {
+   * Object value = evaluate(expression);
+   * System.out.println(stringify(value));
+   * } catch (RuntimeError error) {
+   * Lox.runtimeError(error);
+   * }
+   * }
+   */
+  // > Statements and State interpret
+  void interpret(List<Stmt> statements) {
+    try {
+      for (Stmt statement : statements) {
+        execute(statement);
+      }
+    } catch (RuntimeError error) {
+      Lox.runtimeError(error);
+    }
+  }
+
+  // < Statements and State interpret
+  // > evaluate
+  private Object evaluate(Expr expr) {
+    return expr.accept(this);
+  }
+
+  // < evaluate
+  // > Statements and State execute
+  private void execute(Stmt stmt) {
+    stmt.accept(this);
+  }
+
+  /*
+   * this corresponds exactly to the number of environments between the current
+   * one and the enclosing one where the interpreter can find the variable’s
+   * value.
+   * The resolver hands that number to the interpreter by calling this:
+   */
+  // < Statements and State execute
+  // > Resolving and Binding resolve
+  void resolve(Expr expr, int depth) {
+    locals.put(expr, depth);
+  }
+
+  // < Resolving and Binding resolve
+  // > Statements and State execute-block
+  void executeBlock(List<Stmt> statements,
+      Environment environment) {
+    Environment previous = this.environment;
+    try {
+      this.environment = environment;
+
+      for (Stmt statement : statements) {
+        execute(statement);
+      }
+    } finally {
+      this.environment = previous;
+    }
+  }
+
+  // < Statements and State execute-block
+  // > Statements and State visit-block
+  @Override
+  public Void visitBlockStmt(Stmt.Block stmt) {
+    executeBlock(stmt.statements, new Environment(environment));
+    return null;
+  }
+
+  // < Statements and State visit-block
+  // > Classes interpreter-visit-class
+  @Override
+  public Void visitClassStmt(Stmt.Class stmt) {
+    // > Inheritance interpret-superclass
+    Object superclass = null;
+    if (stmt.superclass != null) {
+      superclass = evaluate(stmt.superclass);
+      if (!(superclass instanceof LoxClass)) {
+        throw new RuntimeError(stmt.superclass.name,
+            "Superclass must be a class.");
+      }
     }
 
-    void interpret(List<Stmt> statements) {
-        try {
-            for (Stmt statement : statements) {
-                execute(statement);
-            }
-        } catch (RuntimeError error) {
-            Lox.runtimeError(error);
-        }
-    }
+    // < Inheritance interpret-superclass
+    environment.define(stmt.name.lexeme, null);
+    // > Inheritance begin-superclass-environment
 
-    private void execute(Stmt stmt) {
-        stmt.accept(this);
+    if (stmt.superclass != null) {
+      environment = new Environment(environment);
+      environment.define("super", superclass);
+    }
+    // < Inheritance begin-superclass-environment
+    // > interpret-methods
+
+    Map<String, LoxFunction> methods = new HashMap<>();
+    for (Stmt.Function method : stmt.methods) {
+      /*
+       * Classes interpret-methods < Classes interpreter-method-initializer
+       * LoxFunction function = new LoxFunction(method, environment);
+       */
+      // > interpreter-method-initializer
+      LoxFunction function = new LoxFunction(method, environment,
+          method.name.lexeme.equals("init"));
+      // < interpreter-method-initializer
+      methods.put(method.name.lexeme, function);
     }
 
     /*
-     * this corresponds exactly to the number of environments between the current
-     * one and the enclosing one where the interpreter can find the variable’s
-     * value.
-     * The resolver hands that number to the interpreter by calling this:
+     * Classes interpret-methods < Inheritance interpreter-construct-class
+     * LoxClass klass = new LoxClass(stmt.name.lexeme, methods);
      */
-    void resolve(Expr expr, int depth) {
-        locals.put(expr, depth);
+    // > Inheritance interpreter-construct-class
+    LoxClass klass = new LoxClass(stmt.name.lexeme,
+        (LoxClass) superclass, methods);
+    // > end-superclass-environment
+
+    if (superclass != null) {
+      environment = environment.enclosing;
+    }
+    // < end-superclass-environment
+
+    // < Inheritance interpreter-construct-class
+    // < interpret-methods
+    /*
+     * Classes interpreter-visit-class < Classes interpret-methods
+     * LoxClass klass = new LoxClass(stmt.name.lexeme);
+     */
+    environment.assign(stmt.name, klass);
+    return null;
+  }
+
+  // < Classes interpreter-visit-class
+  // > Statements and State visit-expression-stmt
+  @Override
+  public Void visitExpressionStmt(Stmt.Expression stmt) {
+    evaluate(stmt.expression);
+    return null;
+  }
+
+  // < Statements and State visit-expression-stmt
+  // > Functions visit-function
+  @Override
+  public Void visitFunctionStmt(Stmt.Function stmt) {
+    /*
+     * Functions visit-function < Functions visit-closure
+     * LoxFunction function = new LoxFunction(stmt);
+     */
+    /*
+     * Functions visit-closure < Classes construct-function
+     * LoxFunction function = new LoxFunction(stmt, environment);
+     */
+    // > Classes construct-function
+    LoxFunction function = new LoxFunction(stmt, environment,
+        false);
+    // < Classes construct-function
+    environment.define(stmt.name.lexeme, function);
+    return null;
+  }
+
+  // < Functions visit-function
+  // > Control Flow visit-if
+  @Override
+  public Void visitIfStmt(Stmt.If stmt) {
+    if (isTruthy(evaluate(stmt.condition))) {
+      execute(stmt.thenBranch);
+    } else if (stmt.elseBranch != null) {
+      execute(stmt.elseBranch);
+    }
+    return null;
+  }
+
+  // < Control Flow visit-if
+  // > Statements and State visit-print
+  @Override
+  public Void visitPrintStmt(Stmt.Print stmt) {
+    Object value = evaluate(stmt.expression);
+    System.out.println(stringify(value));
+    return null;
+  }
+
+  // < Statements and State visit-print
+  // > Functions visit-return
+  @Override
+  public Void visitReturnStmt(Stmt.Return stmt) {
+    Object value = null;
+    if (stmt.value != null)
+      value = evaluate(stmt.value);
+
+    throw new Return(value);
+  }
+
+  // < Functions visit-return
+  // > Statements and State visit-var
+  @Override
+  public Void visitVarStmt(Stmt.Var stmt) {
+    Object value = null;
+    if (stmt.initializer != null) {
+      value = evaluate(stmt.initializer);
     }
 
-    @Override
-    public Void visitBlockStmt(Stmt.Block stmt) {
-        executeBlock(stmt.statements, new Environment(environment));
-        return null;
+    environment.define(stmt.name.lexeme, value);
+    return null;
+  }
+
+  // < Statements and State visit-var
+  // > Control Flow visit-while
+  @Override
+  public Void visitWhileStmt(Stmt.While stmt) {
+    while (isTruthy(evaluate(stmt.condition))) {
+      execute(stmt.body);
+    }
+    return null;
+  }
+
+  // < Control Flow visit-while
+  // > Statements and State visit-assign
+  @Override
+  public Object visitAssignExpr(Expr.Assign expr) {
+    Object value = evaluate(expr.value);
+    /*
+     * Statements and State visit-assign < Resolving and Binding resolved-assign
+     * environment.assign(expr.name, value);
+     */
+    // > Resolving and Binding resolved-assign
+
+    Integer distance = locals.get(expr);
+    if (distance != null) {
+      environment.assignAt(distance, expr.name, value);
+    } else {
+      globals.assign(expr.name, value);
     }
 
-    void executeBlock(List<Stmt> statements,
-            Environment environment) {
-        Environment previous = this.environment;
-        try {
-            this.environment = environment;
+    // < Resolving and Binding resolved-assign
+    return value;
+  }
 
-            for (Stmt statement : statements) {
-                execute(statement);
-            }
-        } finally {
-            this.environment = previous;
-        }
-    }
+  // < Statements and State visit-assign
+  // > visit-binary
+  @Override
+  public Object visitBinaryExpr(Expr.Binary expr) {
+    Object left = evaluate(expr.left);
+    Object right = evaluate(expr.right); // [left]
 
-    @Override
-    public Object visitLiteralExpr(Expr.Literal expr) {
-        return expr.value;
-    }
-
-    @Override
-    public Object visitLogicalExpr(Expr.Logical expr) {
-        Object left = evaluate(expr.left);
-
-        if (expr.operator.type == TokenType.OR) {
-            if (isTruthy(left))
-                return left;
-        } else {
-            if (!isTruthy(left))
-                return left;
-        }
-
-        return evaluate(expr.right);
-    }
-
-    @Override
-    public Object visitUnaryExpr(Expr.Unary expr) {
-        Object right = evaluate(expr.right);
-        switch (expr.operator.type) {
-            case MINUS:
-                checkNumberOperand(expr.operator, right);
-                return -(double) right;
-            case BANG:
-                return !isTruthy(right);
-        }
-        // Unreachable.
-        return null;
-    }
-
-    @Override
-    public Object visitVariableExpr(Expr.Variable expr) {
-        return lookUpVariable(expr.name, expr);
-    }
-
-    private Object lookUpVariable(Token name, Expr expr) {
-        Integer distance = locals.get(expr);
-        if (distance != null) {
-            return environment.getAt(distance, name.lexeme);
-        } else {
-            return globals.get(name);
-        }
-    }
-
-    private void checkNumberOperand(Token operator, Object operand) {
-        if (operand instanceof Double)
-            return;
-        throw new RuntimeError(operator, "Operand must be a number.");
-    }
-
-    private void checkNumberOperands(Token operator,
-            Object left, Object right) {
-        if (left instanceof Double && right instanceof Double)
-            return;
-
-        throw new RuntimeError(operator, "Operands must be numbers.");
-    }
-
-    // the 0 in lox is true not false, if U want it be false edit the function below
-    private boolean isTruthy(Object object) {
-        if (object == null)
-            return false;
-        if (object instanceof Boolean)
-            return (boolean) object;
-        return true;
-    }
-
-    private boolean isEqual(Object a, Object b) {
-        if (a == null && b == null)
-            return true;
-        if (a == null)
-            return false;
+    switch (expr.operator.type) {
+      case GREATER:
+        // checkNumberOperands(expr.operator, left, right);
         // accept compare number with the length of string
-        if (a instanceof Double && b instanceof String)
-            return (double) a == b.toString().length();
-        if (a instanceof String && b instanceof Double)
-            return a.toString().length() == (double) b;
-        return a.equals(b);
-    }
-
-    private String stringify(Object object) {
-        if (object == null) {
-            // throw new RuntimeError(null,
-            // "access not initialized variable not allowed");
-            return "nil";
+        if (left instanceof Double && right instanceof Double)
+          return (double) left > (double) right;
+        if (left instanceof Double && right instanceof String)
+          return (double) left > right.toString().length();
+        if (left instanceof String && right instanceof Double)
+          return left.toString().length() > (double) right;
+        break;
+      case GREATER_EQUAL:
+        // checkNumberOperands(expr.operator, left, right);
+        // accept compare number with the length of string
+        if (left instanceof Double && right instanceof Double)
+          return (double) left >= (double) right;
+        if (left instanceof Double && right instanceof String)
+          return (double) left >= right.toString().length();
+        if (left instanceof String && right instanceof Double)
+          return left.toString().length() >= (double) right;
+        break;
+      case LESS:
+        // checkNumberOperands(expr.operator, left, right);
+        // accept compare number with the length of string
+        if (left instanceof Double && right instanceof Double)
+          return (double) left < (double) right;
+        if (left instanceof Double && right instanceof String)
+          return (double) left < right.toString().length();
+        if (left instanceof String && right instanceof Double)
+          return left.toString().length() < (double) right;
+        break;
+      case LESS_EQUAL:
+        // checkNumberOperands(expr.operator, left, right);
+        // accept compare number with the length of string
+        if (left instanceof Double && right instanceof Double)
+          return (double) left <= (double) right;
+        if (left instanceof Double && right instanceof String)
+          return (double) left <= right.toString().length();
+        if (left instanceof String && right instanceof Double)
+          return left.toString().length() <= (double) right;
+        break;
+      case BANG_EQUAL:
+        return !isEqual(left, right);
+      case EQUAL_EQUAL:
+        return isEqual(left, right);
+      case MINUS:
+        checkNumberOperands(expr.operator, left, right);
+        return (double) left - (double) right;
+      case PLUS:
+        if (left instanceof Double && right instanceof Double) {
+          return (double) left + (double) right;
+        }
+        if (left instanceof String && right instanceof String) {
+          return (String) left + (String) right;
+        }
+        // make the lox accept add strings with numbers
+        if (left instanceof Double && right instanceof String) {
+          return stringify((Double) left) + (String) right;
+        }
+        if (left instanceof String && right instanceof Double) {
+          return (String) left + stringify((Double) right);
+        }
+        break;
+      // throw new RuntimeError(expr.operator,
+      // "Operands must be two numbers or two strings.");
+      case SLASH:
+        checkNumberOperands(expr.operator, left, right);
+        // handel our own messages on not allowed divisions
+        Object result = (double) left / (double) right;
+        if (result.toString() == "Infinity")
+          return "Division by zero is not allowed";
+        if (result.toString() == "NaN")
+          return "Not a Number";
+        return result;
+      case STAR:
+        // checkNumberOperands(expr.operator, left, right);
+        // return (double) left * (double) right;
+        if (left instanceof Double && right instanceof Double) {
+          return (double) left * (double) right;
         }
 
-        if (object instanceof Double) {
-            String text = object.toString();
-            if (text.endsWith(".0")) {
-                text = text.substring(0, text.length() - 2);
-            }
-            return text;
+        if (left instanceof Double && right instanceof String) {
+          double repeatCount = (Double) left;
+          if (repeatCount < 0) {
+            throw new RuntimeError(null,
+                "Cannot repeat a string a negative number of times");
+          }
+          StringBuilder starResult = new StringBuilder();
+          for (int i = 0; i < repeatCount; i++) {
+            starResult.append(right);
+          }
+          return starResult.toString();
         }
-
-        return object.toString();
     }
 
-    @Override
-    public Object visitGroupingExpr(Expr.Grouping expr) {
-        return evaluate(expr.expression);
+    // Unreachable.
+    return null;
+  }
+
+  // < visit-binary
+  // > Functions visit-call
+  @Override
+  public Object visitCallExpr(Expr.Call expr) {
+    Object callee = evaluate(expr.callee);
+
+    List<Object> arguments = new ArrayList<>();
+    for (Expr argument : expr.arguments) { // [in-order]
+      arguments.add(evaluate(argument));
     }
 
-    private Object evaluate(Expr expr) {
-        return expr.accept(this);
+    // > check-is-callable
+    if (!(callee instanceof LoxCallable)) {
+      throw new RuntimeError(expr.paren,
+          "Can only call functions and classes.");
     }
 
-    @Override
-    public Void visitExpressionStmt(Stmt.Expression stmt) {
-        evaluate(stmt.expression);
-        return null;
+    // < check-is-callable
+    LoxCallable function = (LoxCallable) callee;
+    // > check-arity
+    if (arguments.size() != function.arity()) {
+      throw new RuntimeError(expr.paren, "Expected " +
+          function.arity() + " arguments but got " +
+          arguments.size() + ".");
     }
 
-    @Override
-    public Void visitFunctionStmt(Stmt.Function stmt) {
-        LoxFunction function = new LoxFunction(stmt, environment);
-        environment.define(stmt.name.lexeme, function);
-        return null;
+    // < check-arity
+    return function.call(this, arguments);
+  }
+
+  // < Functions visit-call
+  // > Classes interpreter-visit-get
+  @Override
+  public Object visitGetExpr(Expr.Get expr) {
+    Object object = evaluate(expr.object);
+    if (object instanceof LoxInstance) {
+      return ((LoxInstance) object).get(expr.name);
     }
 
-    @Override
-    public Void visitIfStmt(Stmt.If stmt) {
-        if (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.thenBranch);
-        } else if (stmt.elseBranch != null) {
-            execute(stmt.elseBranch);
-        }
-        return null;
+    throw new RuntimeError(expr.name,
+        "Only instances have properties.");
+  }
+
+  // < Classes interpreter-visit-get
+  // > visit-grouping
+  @Override
+  public Object visitGroupingExpr(Expr.Grouping expr) {
+    return evaluate(expr.expression);
+  }
+
+  // < visit-grouping
+  // > visit-literal
+  @Override
+  public Object visitLiteralExpr(Expr.Literal expr) {
+    return expr.value;
+  }
+
+  // < visit-literal
+  // > Control Flow visit-logical
+  @Override
+  public Object visitLogicalExpr(Expr.Logical expr) {
+    Object left = evaluate(expr.left);
+
+    if (expr.operator.type == TokenType.OR) {
+      if (isTruthy(left))
+        return left;
+    } else {
+      if (!isTruthy(left))
+        return left;
     }
 
-    @Override
-    public Void visitPrintStmt(Stmt.Print stmt) {
-        Object value = evaluate(stmt.expression);
-        System.out.println(stringify(value));
-        return null;
+    return evaluate(expr.right);
+  }
+
+  // < Control Flow visit-logical
+  // > Classes interpreter-visit-set
+  @Override
+  public Object visitSetExpr(Expr.Set expr) {
+    Object object = evaluate(expr.object);
+
+    if (!(object instanceof LoxInstance)) { // [order]
+      throw new RuntimeError(expr.name,
+          "Only instances have fields.");
     }
 
-    @Override
-    public Void visitReturnStmt(Stmt.Return stmt) {
-        Object value = null;
-        if (stmt.value != null)
-            value = evaluate(stmt.value);
+    Object value = evaluate(expr.value);
+    ((LoxInstance) object).set(expr.name, value);
+    return value;
+  }
 
-        throw new Return(value);
+  // < Classes interpreter-visit-set
+  // > Inheritance interpreter-visit-super
+  @Override
+  public Object visitSuperExpr(Expr.Super expr) {
+    int distance = locals.get(expr);
+    LoxClass superclass = (LoxClass) environment.getAt(
+        distance, "super");
+    // > super-find-this
+
+    LoxInstance object = (LoxInstance) environment.getAt(
+        distance - 1, "this");
+    // < super-find-this
+    // > super-find-method
+
+    LoxFunction method = superclass.findMethod(expr.method.lexeme);
+    // > super-no-method
+
+    if (method == null) {
+      throw new RuntimeError(expr.method,
+          "Undefined property '" + expr.method.lexeme + "'.");
     }
 
-    @Override
-    public Void visitVarStmt(Stmt.Var stmt) {
-        Object value = null;
-        if (stmt.initializer != null) {
-            value = evaluate(stmt.initializer);
-        }
+    // < super-no-method
+    return method.bind(object);
+    // < super-find-method
+  }
 
-        environment.define(stmt.name.lexeme, value);
-        return null;
+  // < Inheritance interpreter-visit-super
+  // > Classes interpreter-visit-this
+  @Override
+  public Object visitThisExpr(Expr.This expr) {
+    return lookUpVariable(expr.keyword, expr);
+  }
+
+  // < Classes interpreter-visit-this
+  // > visit-unary
+  @Override
+  public Object visitUnaryExpr(Expr.Unary expr) {
+    Object right = evaluate(expr.right);
+
+    switch (expr.operator.type) {
+      // > unary-bang
+      case BANG:
+        return !isTruthy(right);
+      // < unary-bang
+      case MINUS:
+        // > check-unary-operand
+        checkNumberOperand(expr.operator, right);
+        // < check-unary-operand
+        return -(double) right;
     }
 
-    @Override
-    public Void visitWhileStmt(Stmt.While stmt) {
-        while (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.body);
-            if (shouldBreak) {
-                break;
-            }
-        }
-        return null;
+    // Unreachable.
+    return null;
+  }
+
+  // < visit-unary
+  // > Statements and State visit-variable
+  @Override
+  public Object visitVariableExpr(Expr.Variable expr) {
+    /*
+     * Statements and State visit-variable < Resolving and Binding
+     * call-look-up-variable
+     * return environment.get(expr.name);
+     */
+    // > Resolving and Binding call-look-up-variable
+    return lookUpVariable(expr.name, expr);
+    // < Resolving and Binding call-look-up-variable
+  }
+
+  // > Resolving and Binding look-up-variable
+  private Object lookUpVariable(Token name, Expr expr) {
+    Integer distance = locals.get(expr);
+    if (distance != null) {
+      return environment.getAt(distance, name.lexeme);
+    } else {
+      return globals.get(name);
+    }
+  }
+
+  // < Resolving and Binding look-up-variable
+  // < Statements and State visit-variable
+  // > check-operand
+  private void checkNumberOperand(Token operator, Object operand) {
+    if (operand instanceof Double)
+      return;
+    throw new RuntimeError(operator, "Operand must be a number.");
+  }
+
+  // < check-operand
+  // > check-operands
+  private void checkNumberOperands(Token operator,
+      Object left, Object right) {
+    if (left instanceof Double && right instanceof Double)
+      return;
+    // [operand]
+    throw new RuntimeError(operator, "Operands must be numbers.");
+  }
+
+  // the 0 in lox is true not false, if U want it be false edit the function below
+  // < check-operands
+  // > is-truthy
+  private boolean isTruthy(Object object) {
+    if (object == null)
+      return false;
+    if (object instanceof Boolean)
+      return (boolean) object;
+    return true;
+  }
+
+  // < is-truthy
+  // > is-equal
+  private boolean isEqual(Object a, Object b) {
+    if (a == null && b == null)
+      return true;
+    if (a == null)
+      return false;
+
+    return a.equals(b);
+  }
+
+  // < is-equal
+  // > stringify
+  private String stringify(Object object) {
+    if (object == null) {
+      // throw new RuntimeError(null,
+      // "access not initialized variable not allowed");
+      return "nil";
     }
 
-    @Override
-    public Void visitBreakStmt(Stmt.Break stmt) {
-        shouldBreak = true;
-        return null;
+    if (object instanceof Double) {
+      String text = object.toString();
+      if (text.endsWith(".0")) {
+        text = text.substring(0, text.length() - 2);
+      }
+      return text;
     }
 
-    @Override
-    public Object visitAssignExpr(Expr.Assign expr) {
-        // if expr null -> normal
-        Object value = evaluate(expr.value);
-        Integer distance = locals.get(expr);
-        if (distance != null) {
-            environment.assignAt(distance, expr.name, value);
-        } else {
-            globals.assign(expr.name, value);
-        }
-        return value;
-        // else -> expr -> binary -> evaluate if isTruthy -> left = value
-    }
-
-    @Override
-    public Object visitBinaryExpr(Expr.Binary expr) {
-        Object left = evaluate(expr.left);
-        Object right = evaluate(expr.right);
-        switch (expr.operator.type) {
-            case GREATER:
-                // checkNumberOperands(expr.operator, left, right);
-                // accept compare number with the length of string
-                if (left instanceof Double && right instanceof Double)
-                    return (double) left > (double) right;
-                if (left instanceof Double && right instanceof String)
-                    return (double) left > right.toString().length();
-                if (left instanceof String && right instanceof Double)
-                    return left.toString().length() > (double) right;
-                break;
-            case GREATER_EQUAL:
-                // checkNumberOperands(expr.operator, left, right);
-                // accept compare number with the length of string
-                if (left instanceof Double && right instanceof Double)
-                    return (double) left >= (double) right;
-                if (left instanceof Double && right instanceof String)
-                    return (double) left >= right.toString().length();
-                if (left instanceof String && right instanceof Double)
-                    return left.toString().length() >= (double) right;
-                break;
-            case LESS:
-                // checkNumberOperands(expr.operator, left, right);
-                // accept compare number with the length of string
-                if (left instanceof Double && right instanceof Double)
-                    return (double) left < (double) right;
-                if (left instanceof Double && right instanceof String)
-                    return (double) left < right.toString().length();
-                if (left instanceof String && right instanceof Double)
-                    return left.toString().length() < (double) right;
-                break;
-            case LESS_EQUAL:
-                // checkNumberOperands(expr.operator, left, right);
-                // accept compare number with the length of string
-                if (left instanceof Double && right instanceof Double)
-                    return (double) left <= (double) right;
-                if (left instanceof Double && right instanceof String)
-                    return (double) left <= right.toString().length();
-                if (left instanceof String && right instanceof Double)
-                    return left.toString().length() <= (double) right;
-                break;
-            case BANG_EQUAL:
-                return !isEqual(left, right);
-            case EQUAL_EQUAL:
-                return isEqual(left, right);
-            case MINUS:
-                checkNumberOperands(expr.operator, left, right);
-                return (double) left - (double) right;
-            case PLUS:
-                if (left instanceof Double && right instanceof Double) {
-                    return (double) left + (double) right;
-                }
-                if (left instanceof String && right instanceof String) {
-                    return (String) left + (String) right;
-                }
-                // make the lox accept add strings with numbers
-                if (left instanceof Double && right instanceof String) {
-                    return stringify((Double) left) + (String) right;
-                }
-                if (left instanceof String && right instanceof Double) {
-                    return (String) left + stringify((Double) right);
-                }
-                break;
-            // throw new RuntimeError(expr.operator,
-            // "Operands must be two numbers or two strings.");
-            case SLASH:
-                checkNumberOperands(expr.operator, left, right);
-                // handel our own messages on not allowed divisions
-                Object result = (double) left / (double) right;
-                if (result.toString() == "Infinity")
-                    return "Division by zero is not allowed";
-                if (result.toString() == "NaN")
-                    return "Not a Number";
-                return result;
-            case STAR:
-                // checkNumberOperands(expr.operator, left, right);
-                // return (double) left * (double) right;
-                if (left instanceof Double && right instanceof Double) {
-                    return (double) left * (double) right;
-                }
-
-                if (left instanceof Double && right instanceof String) {
-                    double repeatCount = (Double) left;
-                    if (repeatCount < 0) {
-                        throw new RuntimeError(null,
-                                "Cannot repeat a string a negative number of times");
-                    }
-                    StringBuilder starResult = new StringBuilder();
-                    for (int i = 0; i < repeatCount; i++) {
-                        starResult.append(right);
-                    }
-                    return starResult.toString();
-                }
-        }
-        // Unreachable.
-        return null;
-    }
-
-    @Override
-    public Object visitCallExpr(Expr.Call expr) {
-        Object callee = evaluate(expr.callee);
-
-        List<Object> arguments = new ArrayList<>();
-        for (Expr argument : expr.arguments) {
-            arguments.add(evaluate(argument));
-        }
-
-        if (!(callee instanceof LoxCallable)) {
-            throw new RuntimeError(expr.paren,
-                    "Can only call functions and classes.");
-        }
-
-        LoxCallable function = (LoxCallable) callee;
-
-        if (arguments.size() != function.arity()) {
-            throw new RuntimeError(expr.paren, "Expected " +
-                    function.arity() + " arguments but got " +
-                    arguments.size() + ".");
-        }
-
-        return function.call(this, arguments);
-    }
-
-    @Override
-    public Object visitLambdaExpr(Expr.Lambda expr) {
-        return new LoxFunction(new Stmt.Function(null, expr.function.params, expr.function.body), environment);
-    }
-
+    return object.toString();
+  }
+  // < stringify
 }

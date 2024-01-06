@@ -25,6 +25,8 @@
   > HusseinHusseinHusseinHusseinHussein
 - [x] Declaration without var
 - [x] anonymous functions
+  > functionDeclaration → "fun" IDENTIFIER? "(" parameters? ")" block ;
+- [x] Define the "input" function for user input in Interpreter.java
 - [x] catch redeclarations of variables within the global scope in Resolver.java
   > Error at 'a': Variable with this name is already declared in the global scope.
   >

@@ -110,6 +110,7 @@ var a = 5;
 print a;
 */
 
+/*
 while (true) {
   var a = 6; 
   print a;
@@ -121,6 +122,7 @@ while (true) {
 
 var a = 5;
 print a;
+*/
 
 /*
 if (a > 1) {
@@ -128,3 +130,22 @@ if (a > 1) {
   break;
 }
 */
+
+class DevonshireCream {
+  serveOn() {
+    return "Scones";
+  }
+}
+print DevonshireCream; // Prints "DevonshireCream".
+
+class Bagel {}
+var bagel = Bagel();
+print bagel; // Prints "Bagel instance".
+
+class Bacon {
+  eat() {
+    print "Crunch crunch crunch!";
+  }
+}
+
+Bacon().eat(); // Prints "Crunch crunch crunch!".
