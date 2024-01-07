@@ -131,6 +131,7 @@ if (a > 1) {
 }
 */
 
+/*
 class DevonshireCream {
   serveOn() {
     return "Scones";
@@ -149,12 +150,59 @@ class Bacon {
 }
 
 Bacon().eat(); // Prints "Crunch crunch crunch!".
+*/
 
-
+/*
 class Doughnut {
-cook() {
-print "Fry until golden brown.";
+  cook() {
+    print "Fry until golden brown.";
+  }
 }
+class BostonCream < Doughnut {
+  cook() {
+    var method = super.cook;
+    method();
+    super.cook();
+    print "Pipe full of custard and coat with chocolate.";
+  }
 }
-class BostonCream < Doughnut {}
 BostonCream().cook();
+*/
+
+/*
+class A {
+  method() {
+  print "Method A";
+  }
+}
+class B < A {
+  method() {
+    print "Method B";
+  }
+  test() { 
+    super.method();
+  }
+}
+class C < B {}
+
+C().test();
+*/
+
+/*
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 1) + fib(n - 2);
+}
+
+var before = clock();
+print fib(40);
+var after = clock();
+print after - before;
+*/
+
+while (true) {
+  if (5 > 0 ) {
+    print 6;
+    break;
+  }
+}

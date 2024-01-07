@@ -30,7 +30,10 @@ class Scanner {
 		keywords.put("true", TRUE);
 		keywords.put("var", VAR);
 		keywords.put("while", WHILE);
+		// handle break statement
 		keywords.put("break", BREAK);
+		// handle continue statement
+		keywords.put("continue", CONTINUE);
 	}
 	// < keyword-map
 	private final String source;

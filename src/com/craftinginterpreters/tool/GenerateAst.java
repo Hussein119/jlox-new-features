@@ -90,7 +90,10 @@ public class GenerateAst {
         // > Control Flow while-ast
         "Var        : Token name, Expr initializer",
         "While      : Expr condition, Stmt body",
-        "Break      : Token keyword"
+        // handle break statement
+        "Break      : Token keyword",
+        // handle continue statement
+        "Continue      : Token keyword"
     // < Control Flow while-ast
     ));
     // < Statements and State stmt-ast

@@ -142,6 +142,12 @@ class Parser {
     // > Control Flow match-while
     if (match(WHILE))
       return whileStatement();
+    // handle break statement
+    if (match(BREAK))
+      return breakStatement();
+    // handle continue statement
+    if (match(CONTINUE))
+      return continueStatement();
     // < Control Flow match-while
     // > parse-block
     if (match(LEFT_BRACE))
@@ -641,6 +647,20 @@ class Parser {
   private ParseError error(Token token, String message) {
     Lox.error(token, message);
     return new ParseError();
+  }
+
+  // handle break statement
+  private Stmt breakStatement() {
+    Token keyword = previous();
+    consume(SEMICOLON, "Expect ';' after break statement.");
+    return new Stmt.Break(keyword);
+  }
+
+  // handle continue statement
+  private Stmt continueStatement() {
+    Token keyword = previous();
+    consume(SEMICOLON, "Expect ';' after continue statement.");
+    return new Stmt.Continue(keyword);
   }
 
   /*

@@ -16,6 +16,8 @@ import java.util.Map;
 
 import java.util.Scanner;
 
+import com.craftinginterpreters.lox.Stmt.Break;
+
 /* Evaluating Expressions interpreter-class < Statements and State interpreter
 class Interpreter implements Expr.Visitor<Object> {
 */
@@ -35,6 +37,12 @@ class Interpreter implements Expr.Visitor<Object>,
   private final Map<Expr, Integer> locals = new HashMap<>();
   // < Resolving and Binding locals-field
   // > Statements and State environment-field
+
+  // handle break statement
+  boolean shouldBreak = false;
+
+  // handle continue statement
+  boolean shouldContinue = false;
 
   // < Statements and State environment-field
   // > Functions interpreter-constructor
@@ -138,6 +146,15 @@ class Interpreter implements Expr.Visitor<Object>,
       this.environment = environment;
 
       for (Stmt statement : statements) {
+        // handle break statement
+        if (shouldBreak) {
+          break;
+        }
+        // handle continue statement
+        if (shouldContinue) {
+          shouldContinue = false;
+          continue;
+        }
         execute(statement);
       }
     } finally {
@@ -657,4 +674,18 @@ class Interpreter implements Expr.Visitor<Object>,
     return object.toString();
   }
   // < stringify
+
+  // handle break statement
+  @Override
+  public Void visitBreakStmt(Stmt.Break stmt) {
+    shouldBreak = true;
+    return null;
+  }
+
+  // handle continue statement
+  @Override
+  public Void visitContinueStmt(Stmt.Continue stmt) {
+    shouldContinue = true;
+    return null;
+  }
 }
